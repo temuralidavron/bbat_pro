@@ -1,0 +1,10 @@
+# venv / IDE / cache
+.venv/
+.idea/
+__pycache__/
+*.pyc
+
+# data & outputs (PII + katta fayllar — GitHub'ga ketmasin)
+work/
+*.csv
+*.npy
