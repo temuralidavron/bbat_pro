@@ -1,0 +1,8 @@
+.venv/
+.idea/
+.git/
+work/
+__pycache__/
+*.csv
+*.npy
+*.pyc
