@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 install --no-cache-dir --break-system-packages insightface
 RUN pip3 uninstall -y onnxruntime || true
 RUN pip3 install --no-cache-dir --break-system-packages \
-        onnxruntime-gpu opencv-python-headless requests
+        onnxruntime-gpu opencv-python-headless requests \
+        faiss-cpu pandas openpyxl
 
 RUN python3 -c "from insightface.app import FaceAnalysis; FaceAnalysis(name='buffalo_l', allowed_modules=['detection','recognition']).prepare(ctx_id=-1)"
 
