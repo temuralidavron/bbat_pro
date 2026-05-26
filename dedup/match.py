@@ -10,29 +10,35 @@ from common import WORK, load_parts
 def build_index(emb):
     import faiss
     n, d = emb.shape
-    if n <= 300000:
+    if n <= 200000:
         index = faiss.IndexFlatIP(d)
     else:
         index = faiss.IndexHNSWFlat(d, 32, faiss.METRIC_INNER_PRODUCT)
-        index.hnsw.efConstruction = 80
-        index.hnsw.efSearch = 96
+        index.hnsw.efConstruction = 200
+        index.hnsw.efSearch = 256
     index.add(emb)
     return index
 
 
-def range_pairs(emb, floor):
-    """All unique pairs (i<j) with cosine >= floor."""
+def range_pairs(emb, floor, knn=30):
+    """Top-knn neighbours per face, keep pairs with cosine >= floor (bounded memory; UF links larger groups)."""
     index = build_index(emb)
-    lims, D, I = index.range_search(emb, float(floor))
+    k = min(knn + 1, emb.shape[0])
+    D, I = index.search(emb, k)
     pairs = {}
-    n = emb.shape[0]
+    n = I.shape[0]
     for i in range(n):
-        for p in range(lims[i], lims[i + 1]):
-            j = int(I[p])
+        Ii, Di = I[i], D[i]
+        for c in range(Ii.shape[0]):
+            j = int(Ii[c])
+            if j < 0:
+                break
             if j == i:
                 continue
+            s = float(Di[c])
+            if s < floor:
+                break
             a, b = (i, j) if i < j else (j, i)
-            s = float(D[p])
             if pairs.get((a, b), -1.0) < s:
                 pairs[(a, b)] = s
     return pairs
@@ -105,6 +111,7 @@ def main():
     ap.add_argument("--floor", type=float, default=0.30)
     ap.add_argument("--thresholds", default="0.35,0.40,0.45,0.50,0.55,0.60,0.65")
     ap.add_argument("--per-bin", type=int, default=40)
+    ap.add_argument("--knn", type=int, default=30)
     ap.add_argument("--out-html", default=os.path.join(WORK, "review.html"))
     args = ap.parse_args()
 
@@ -113,7 +120,7 @@ def main():
     if emb.shape[0] == 0:
         return
 
-    pairs = range_pairs(emb, args.floor)
+    pairs = range_pairs(emb, args.floor, args.knn)
     print(f"candidate pairs (sim>={args.floor}): {len(pairs)}\n")
     print(f"{'thr':>6} {'edges':>9} {'ids':>9} {'groups':>9} {'max':>6}  size_hist(2,3,4,5+)")
     for thr in [float(x) for x in args.thresholds.split(",")]:
