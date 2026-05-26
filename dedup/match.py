@@ -113,6 +113,7 @@ def main():
     ap.add_argument("--per-bin", type=int, default=40)
     ap.add_argument("--knn", type=int, default=30)
     ap.add_argument("--out-html", default=os.path.join(WORK, "review.html"))
+    ap.add_argument("--dump", default="", help="save candidate pairs to npz (a,b,sim) for the web tool")
     args = ap.parse_args()
 
     emb, ids, urls = load_parts()
@@ -122,6 +123,12 @@ def main():
 
     pairs = range_pairs(emb, args.floor, args.knn)
     print(f"candidate pairs (sim>={args.floor}): {len(pairs)}\n")
+
+    if args.dump:
+        ab = np.array(list(pairs.keys()), dtype=np.int64).reshape(-1, 2)
+        sims = np.array(list(pairs.values()), dtype=np.float32)
+        np.savez(args.dump, a=ab[:, 0], b=ab[:, 1], sim=sims)
+        print(f"dumped {len(sims)} pairs -> {args.dump}", flush=True)
     print(f"{'thr':>6} {'edges':>9} {'ids':>9} {'groups':>9} {'max':>6}  size_hist(2,3,4,5+)")
     for thr in [float(x) for x in args.thresholds.split(",")]:
         edges, involved, sizes = components(pairs, emb.shape[0], thr)
