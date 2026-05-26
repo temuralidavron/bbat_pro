@@ -58,6 +58,7 @@ def main():
     ap.add_argument("--threshold", type=float, default=0.65)
     ap.add_argument("--pairs", default=os.path.join(WORK, "pairs.npz"))
     ap.add_argument("--out-dir", default=WORK)
+    ap.add_argument("--html-limit", type=int, default=800, help="max groups rendered in HTML (CSV/XLSX always full)")
     args = ap.parse_args()
 
     emb, ids, urls = load_parts()
@@ -101,6 +102,7 @@ def main():
         ws2.append([gno, len(rows), max(s), min(s)])
     wb.save(base + ".xlsx")
 
+    rows_total = sum(len(r) for r in groups)
     parts = [
         "<!doctype html><html><head><meta charset='utf-8'><title>dublikatlar</title><style>",
         "body{font-family:sans-serif;background:#0f1115;color:#e6e6e6;margin:0;padding:18px}",
@@ -108,9 +110,11 @@ def main():
         ".g b{font-size:14px}.m{display:inline-block;text-align:center;margin:4px;vertical-align:top}",
         ".m img{width:110px;height:110px;object-fit:cover;border:1px solid #333;border-radius:6px}",
         ".c{font-size:11px;color:#9aa4b2}</style></head><body>",
-        f"<h2>Dublikatlar (threshold &ge; {thr}) &mdash; {len(groups)} guruh</h2>",
+        f"<h2>Dublikatlar (threshold &ge; {thr}) &mdash; jami {len(groups)} guruh, "
+        f"{rows_total} ta ID. Quyida birinchi {min(args.html_limit, len(groups))} guruh "
+        f"(to'liq ro'yxat CSV/XLSX'da).</h2>",
     ]
-    for gno, rows in enumerate(groups, 1):
+    for gno, rows in enumerate(groups[:args.html_limit], 1):
         parts.append(f"<div class='g'><b>Guruh #{gno}</b> &nbsp;({len(rows)} ta ID)<br>")
         for r in rows:
             parts.append(f"<div class='m'><img loading='lazy' src='{html.escape(r['url'])}'>"
@@ -120,7 +124,6 @@ def main():
     with open(base + ".html", "w") as f:
         f.write("".join(parts))
 
-    rows_total = sum(len(r) for r in groups)
     print(f"groups={len(groups)} duplicate_ids={rows_total}", flush=True)
     print(f"-> {base}.csv", flush=True)
     print(f"-> {base}.xlsx", flush=True)
